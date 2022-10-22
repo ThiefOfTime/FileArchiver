@@ -67,7 +67,29 @@ class TestFileArchiver(unittest.TestCase):
                 for member in tar_ball.getmembers():
                     member.path = member.path.replace("test", "test2").split("/", maxsplit=1)[1]
                     yield member
-            tarball.extractall("/tmp", members=change_base_path(tarball))
+            
+            import os
+            
+            def is_within_directory(directory, target):
+                
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(target)
+            
+                prefix = os.path.commonprefix([abs_directory, abs_target])
+                
+                return prefix == abs_directory
+            
+            def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            
+                for member in tar.getmembers():
+                    member_path = os.path.join(path, member.name)
+                    if not is_within_directory(path, member_path):
+                        raise Exception("Attempted Path Traversal in Tar File")
+            
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
+                
+            
+            safe_extract(tarball, "/tmp", members=change_base_path(tarball))
 
     def test_number_of_elements(self):
         num_files = 0
